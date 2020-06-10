@@ -1,0 +1,537 @@
+#+TITLE: My GNU Emacs configuration
+#+STARTUP: indent
+#+OPTIONS: H:5 num:nil tags:nil toc:nil timestamps:t
+#+LAYOUT: post
+#+DESCRIPTION: Loading emacs configuration using org-babel
+#+TAGS: emacs
+#+CATEGORIES: editing
+
+This is my org file containing all of my configuration.
+
+* General stuff
+#+BEGIN_SRC emacs-lisp
+
+
+#+END_SRC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Start emacs server if not already running
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(if (and (fboundp 'server-running-p)
+         (not (server-running-p)))
+    (server-start))
+
+;; Remove trailing white space upon saving
+;; Note: because of a bug in EIN we only delete trailing whitespace
+;; when not in EIN mode.
+(add-hook 'before-save-hook
+          (lambda ()
+            (when (not (derived-mode-p 'ein:notebook-multilang-mode))
+              (delete-trailing-whitespace))))
+
+;; Auto-wrap at 80 characters
+(setq-default auto-fill-function 'do-auto-fill)
+(setq-default fill-column 80)
+(turn-on-auto-fill)
+;; Disable auto-fill-mode in programming mode
+(add-hook 'prog-mode-hook (lambda () (auto-fill-mode -1)))
+
+* Here is stored private info
+#+BEGIN_SRC emacs-lisp
+  ;; PRIVATE: personal information about you
+  (setq user-full-name "Ruben Weitzman")
+  (setq user-mail-address "your@email.address")
+#+END_SR
+* Make it easy to find this file
+#+BEGIN_SRC emacs-lisp
+
+ (defun find-config ()
+    "Edit config.org"
+    (interactive)
+    (find-file (expand-file-name "loader.org" init-dir)))
+
+  (global-set-key (kbd "C-c I") 'find-config)
+#+END_SR
+* Basic Interface Settings
+These are setting that do not depend on packages and are built-in enhancements to the UI.
+
+** Looks
+*** Remove lame startup screen
+We use an actual replacement for it, keep reading or head directly to =dashboard=.
+#+BEGIN_SRC emacs-lisp
+(setq inhibit-startup-message t)
+#+END_SRC
+*** Disable menus and scrollbars
+If you like using any of those, change =-1= to =1=.
+#+BEGIN_SRC emacs-lisp
+(tool-bar-mode -1)
+(menu-bar-mode -1)
+(scroll-bar-mode -1)
+#+END_SRC
+*** Disable bell
+This is annoying, remove this line if you like being visually reminded of events.
+#+BEGIN_SRC emacs-lisp
+(setq ring-bell-function 'ignore)
+#+END_SRC
+*** Set UTF-8 encoding
+#+BEGIN_SRC emacs-lisp
+  (setq locale-coding-system 'utf-8)
+  (set-terminal-coding-system 'utf-8)
+  (set-keyboard-coding-system 'utf-8)
+  (set-selection-coding-system 'utf-8)
+  (prefer-coding-system 'utf-8)
+#+END_SRC
+*** Highligh current line
+=hl-line= is awesome! It's not very awesome in the terminal version of emacs though, so we don't use that.
+Besides, it's only used for programming.
+#+BEGIN_SRC emacs-lisp
+ (when window-system (add-hook 'prog-mode-hook 'hl-line-mode))
+#+END_SRC
+*** Pretty symbols
+Changes =lambda= to an actual symbol and a few others as well, only in the GUI version though.
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+(when window-system
+        (use-package pretty-mode
+        :ensure t
+        :config
+        (global-pretty-mode t)))
+** Functionality
+*** Disable backups and auto-saves
+I don't use either, you might want to turn those from =nil= to =t= if you do.
+#+BEGIN_SRC emacs-lisp
+(setq make-backup-files nil)
+(setq auto-save-default nil)
+#+END_SRC
+
+*** Change yes-or-no questions into y-or-n questions
+#+BEGIN_SRC emacs-lisp
+(defalias 'yes-or-no-p 'y-or-n-p)
+#+END_SRC
+
+*** Async
+Lets us use asynchronous processes wherever possible, pretty useful.
+#+BEGIN_SRC emacs-lisp
+  (use-package async
+    :ensure t
+    :init (dired-async-mode 1))
+#+END_SRC
+* Theme
+The most important part of every configuration.
+** A nice theme
+My new favourite one I guess, really decent default values.
+#+BEGIN_SRC emacs-lisp
+  (use-package zerodark-theme
+    :ensure t
+    :init
+      (load-theme 'zerodark t))
+#+END_SRC
+
+** Some customization
+The theme is great, really, but some of the concepts just suck with powerline.
+#+BEGIN_SRC emacs-lisp
+  (let ((class '((class color) (min-colors 89)))
+        (default (if (true-color-p) "#abb2bf" "#afafaf"))
+        (light (if (true-color-p) "#ccd4e3" "#d7d7d7"))
+        (background (if (true-color-p) "#282c34" "#333333"))
+        (background-dark (if (true-color-p) "#24282f" "#222222"))
+        (background-darker (if (true-color-p) "#22252c" "#222222"))
+        (mode-line-inactive (if "#1c2129" "#222222"))
+        (mode-line-active (if (true-color-p) "#6f337e" "#875f87"))
+        (background-lighter (if (true-color-p) "#3a3f4b" "#5f5f5f"))
+        (background-red (if (true-color-p) "#4c3840" "#5f5f5f"))
+        (bright-background-red (if (true-color-p) "#744a5b" "#744a5b"))
+        (background-purple (if (true-color-p) "#48384c" "#5f5f5f"))
+        (background-blue (if (true-color-p) "#38394c" "#444444"))
+        (bright-background-blue (if (true-color-p) "#4e5079" "#4e5079"))
+        (background-green (if (true-color-p) "#3d4a41" "#5f5f5f"))
+        (bright-background-green (if (true-color-p) "#3f6d54" "#3f6d54"))
+        (background-orange (if (true-color-p) "#4a473d" "#5f5f5f"))
+        (hl-line (if (true-color-p) "#2c323b" "#333333"))
+        (grey (if (true-color-p) "#cccccc" "#cccccc"))
+        (grey-dark (if (true-color-p) "#666666" "#666666"))
+        (highlight (if (true-color-p) "#3e4451" "#5f5f5f"))
+        (comment (if (true-color-p) "#687080" "#707070"))
+        (orange (if (true-color-p) "#da8548" "#d7875f"))
+        (orange-light (if (true-color-p) "#ddbd78" "#d7af87"))
+        (red (if (true-color-p) "#ff6c6b" "#ff5f5f"))
+        (purple (if (true-color-p) "#c678dd" "#d787d7"))
+        (purple-dark (if (true-color-p) "#64446d" "#5f5f5f"))
+        (blue (if (true-color-p) "#61afef" "#5fafff"))
+        (blue-dark (if (true-color-p) "#1f5582" "#005f87"))
+        (green (if (true-color-p) "#98be65" "#87af5f"))
+        (green-light (if (true-color-p) "#9eac8c" "#afaf87"))
+        (peach "PeachPuff3")
+        (diff-added-background (if (true-color-p) "#284437" "#284437"))
+        (diff-added-refined-background (if (true-color-p) "#1e8967" "#1e8967"))
+        (diff-removed-background (if (true-color-p) "#583333" "#580000"))
+        (diff-removed-refined-background (if (true-color-p) "#b33c49" "#b33c49"))
+        (diff-current-background (if (true-color-p) "#29457b" "#29457b"))
+        (diff-current-refined-background (if (true-color-p) "#4174ae" "#4174ae")))
+
+    (custom-theme-set-faces
+     'zerodark
+
+     `(fancy-battery-charging ((,class (:background ,background-blue :height 1.0 :bold t))))
+     `(fancy-battery-discharging ((,class (:background ,background-blue :height 1.0))))
+     `(fancy-battery-critical ((,class (:background ,background-blue :height 1.0))))
+
+     ;; mode line stuff
+     `(mode-line ((,class (:background ,background-blue :height 1.0 :foreground ,blue
+                                       :distant-foreground ,background-blue
+                                       :box ,(when zerodark-use-paddings-in-mode-line
+                                               (list :line-width 6 :color background-blue))))))
+
+     `(mode-line-inactive ((,class (:background ,background-blue :height 1.0 :foreground ,default
+                                                :distant-foreground ,background-blue
+                                                :box ,(when zerodark-use-paddings-in-mode-line
+                                                        (list :line-width 6 :color background-blue))))))
+
+     `(header-line ((,class (:inherit mode-line-inactive))))
+
+     `(powerline-active0 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+                                           :distant-foreground ,background-blue))))
+     `(powerline-active1 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+                                           :distant-foreground ,background-blue))))
+     `(powerline-active2 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+                                           :distant-foreground ,background-blue))))
+     `(powerline-inactive0 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+                                             :distant-foreground ,background-blue))))
+     `(powerline-inactive1 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+     distant-foreground ,background-blue))))
+     `(powerline-inactive2 ((,class (:height 1.0 :foreground ,blue :background ,background-blue
+                                             :distant-foreground ,background-blue))))
+
+     `(dashboard-heading-face ((,class (:background ,background :foreground ,blue
+                                                    :bold t :height 1.2))))
+     `(dashboard-banner-logo-title-face ((,class (:background ,background :foreground ,blue
+                                                              :bold t :height 1.2))))
+     `(widget-button ((,class (:background ,background :foreground ,default :bold nil
+                                           :underline t :height 0.9))))
+
+     ;; erc stuff
+     `(erc-nick-default-face ((,class :foreground ,blue :background ,background :weight bold)))
+
+     ;; org stuff
+     `(outline-1 ((,class (:foreground ,blue :weight bold :height 1.8 :bold nil))))
+     `(outline-2 ((,class (:foreground ,purple :weight bold :height 1.7 :bold nil))))
+     `(outline-3 ((,class (:foreground ,peach :weight bold :height 1.6 :bold nil))))
+     `(outline-4 ((,class (:foreground ,green-light :weight bold :height 1.5 :bold nil))))
+     `(outline-5 ((,class (:foreground ,blue :weight bold :height 1.4 :bold nil))))
+     `(outline-6 ((,class (:foreground ,purple :weight bold :height 1.3 :bold nil))))
+     `(outline-7 ((,class (:foreground ,peach :weight bold :height 1.2 :bold nil))))
+     `(outline-8 ((,class (:foreground ,green-light :weight bold :height 1.1 :bold nil))))
+
+     `(org-block-begin-line ((,class (:background ,background-blue :foreground ,blue
+                                                  :bold t :height 1.0))))
+     `(org-block-end-line ((,class (:background ,background-blue :foreground ,blue
+                                                :bold t :height 1.0))))))
+#+END_SR
+* Configure packages
+
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
+* Minor conveniences
+
+Emacs is at it's best when it just does things for you, shows you the way, guides you so to speak.
+This can be best achieved using a number of small extensions. While on their own they might not be particularly
+impressive. Together they create a nice environment for you to work in.
+
+** Visiting the configution
+Quickly edit =~/.emacs.d/config.org=
+#+BEGIN_SRC emacs-lisp
+  (defun config-visit ()
+    (interactive)
+    (find-file "~/.emacs.d/loader.org"))
+  (global-set-key (kbd "C-c e") 'config-visit)
+#+END_SRC
+** Reloading the configuration
+Simply pressing =Control-c r= will reload this file, very handy.
+You can also manually invoke =config-reload=.
+#+BEGIN_SRC emacs-lisp
+  (defun config-reload ()
+    "Reloads ~/.emacs.d/config.org at runtime"
+    (interactive)
+    (org-babel-load-file (expand-file-name "~/.emacs.d/loader.org")))
+  (global-set-key (kbd "C-c r") 'config-reload)
+#+END_SRC
+
+
+** Electric
+If you write any code, you may enjoy this.
+Typing the first character in a set of 2, completes the second one after your cursor.
+Opening a bracket? It's closed for you already. Quoting something? It's closed for you already.
+
+You can easily add and remove pairs yourself, have a look.
+#+BEGIN_SRC emacs-lisp
+(setq electric-pair-pairs '(
+                           (?\{ . ?\})
+                           (?\( . ?\))
+                           (?\[ . ?\])
+                           (?\" . ?\")
+                           ))
+#+END_SRC
+
+And now to enable it
+#+BEGIN_SRC emacs-lisp
+(electric-pair-mode t)
+#+END_SRC
+
+
+** Rainbow
+Mostly useful if you are into web development or game development.
+Every time emacs encounters a hexadecimal code that resembles a color, it will automatically highlight
+it in the appropriate color. This is a lot cooler than you may think.
+#+BEGIN_SRC emacs-lisp
+  (use-package rainbow-mode
+    :ensure t
+    :init
+      (add-hook 'prog-mode-hook 'rainbow-mode))
+#+END_SRC
+
+** Show parens
+I forgot about that initially, it highlights matching parens when the cursor is just behind one of them.
+#+BEGIN_SRC emacs-lisp
+  (show-paren-mode 1)
+#+END_SRC
+** Rainbow delimiters
+Colors parentheses and other delimiters depending on their depth, useful for any language using them,
+especially lisp.
+#+BEGIN_SRC emacs-lisp
+  (use-package rainbow-delimiters
+    :ensure t
+    :init
+      (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+#+END_SRC
+
+** Expand region
+A pretty simple package, takes your cursor and semantically expands the region, so words, sentences, maybe the contents of some parentheses, it's awesome, try it out.
+#+BEGIN_SRC emacs-lisp
+  (use-package expand-region
+    :ensure t
+    :bind ("C-q" . er/expand-region))
+#+END_SRC
+
+** Hungry deletion
+On the list of things I like doing, deleting big whitespaces is pretty close to the bottom.
+Backspace or Delete will get rid of all whitespace until the next non-whitespace character is encountered.
+You may not like it, thus disable it if you must, but it's pretty decent.
+#+BEGIN_SRC emacs-lisp
+  (use-package hungry-delete
+    :ensure t
+    :config
+      (global-hungry-delete-mode))
+#+END_SRC
+
+** Zapping to char
+A nifty little package that kills all text between your cursor and a selected character.
+A lot more useful than you might think. If you wish to include the selected character in the killed region,
+change =zzz-up-to-char= into =zzz-to-char=.
+#+BEGIN_SRC emacs-lisp
+  (use-package zzz-to-char
+    :ensure t
+    :bind ("M-z" . zzz-up-to-char))
+#+END_SRC* Git integration
+Countless are the times where I opened ansi-term to use =git= on something.
+These times are also something that I'd prefer stay in the past, since =magit= is
+great. It's easy and intuitive to use, shows its options at a keypress and much more.
+** magit
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
+* Text manipulation
+Here I shall collect self-made functions that make editing text easier.
+
+** Mark-Multiple
+I can barely contain my joy. This extension allows you to quickly mark the next occurence of a region and edit them all at once. Wow!
+#+BEGIN_SRC emacs-lisp
+  (use-package mark-multiple
+    :ensure t
+    :bind ("C-c q" . 'mark-next-like-this))
+#+END_SRC
+
+** Improved kill-word
+Why on earth does a function called =kill-word= not .. kill a word.
+It instead deletes characters from your cursors position to the end of the word,
+let's make a quick fix and bind it properly.
+#+BEGIN_SRC emacs-lisp
+  (defun daedreth/kill-inner-word ()
+    "Kills the entire word your cursor is in. Equivalent to 'ciw' in vim."
+    (interactive)
+    (forward-char 1)
+    (backward-word)
+    (kill-word 1))
+  (global-set-key (kbd "C-c w k") 'daedreth/kill-inner-word)
+#+END_SRC
+
+** Improved copy-word
+And again, the same as above but we make sure to not delete the source word.
+#+BEGIN_SRC emacs-lisp
+  (defun daedreth/copy-whole-word ()
+    (interactive)
+    (save-excursion
+      (forward-char 1)
+      (backward-word)
+      (kill-word 1)
+      (yank)))
+  (global-set-key (kbd "C-c w c") 'daedreth/copy-whole-word)
+#+END_SRC
+
+** Copy a line
+Regardless of where your cursor is, this quickly copies a line.
+#+BEGIN_SRC emacs-lisp
+  (defun daedreth/copy-whole-line ()
+    "Copies a line without regard for cursor position."
+    (interactive)
+    (save-excursion
+      (kill-new
+       (buffer-substring
+        (point-at-bol)
+        (point-at-eol)))))
+  (global-set-key (kbd "C-c l c") 'daedreth/copy-whole-line)
+#+END_SRC
+
+** Kill a line
+And this quickly deletes a line.
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-c l k") 'kill-whole-line)
+#+END_SRC
+* Projectile
+Projectile is an awesome project manager, mostly because it recognizes directories
+with a =.git= directory as projects and helps you manage them accordingly.
+
+** Enable projectile globally
+This makes sure that everything can be a project.
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile
+    :ensure t
+    :init
+      (projectile-mode 1))
+#+END_SRC
+
+** Let projectile call make
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "<f5>") 'projectile-compile-project)
+#+END_SRC
+
+* Dashboard
+This is your new startup screen, together with projectile it works in unison and
+provides you with a quick look into your latest projects and files.
+Change the welcome message to whatever string you want and
+change the numbers to suit your liking, I find 5 to be enough.
+#+BEGIN_SRC emacs-lisp
+  (use-package dashboard
+    :ensure t
+    :config
+      (dashboard-setup-startup-hook)
+      (setq dashboard-startup-banner "~/.emacs.d/img/dashLogo.png")
+      (setq dashboard-items '((recents  . 5)
+                              (projects . 5)))
+      (setq dashboard-banner-logo-title ""))
+#+END_SRC
+* Python section
+#+BEGIN_SRC emacs-lisp
+(use-package elpy
+:ensure t
+:init
+(elpy-enable))
+
+(use-package flycheck
+:ensure t
+:init (global-flycheck-mode))
+#+END_SRC
+
+* Git integration
+Countless are the times where I opened ansi-term to use =git= on something.
+These times are also something that I'd prefer stay in the past, since =magit= is
+great. It's easy and intuitive to use, shows its options at a keypress and much more.
+** magit
+#+BEGIN_SRC emacs-lisp
+  (use-package magit
+    :ensure t
+    :config
+    (setq magit-push-always-verify nil)
+    (setq git-commit-summary-max-length 50)
+    :bind
+    ("M-g" . magit-status))
+#+END_SR
+* Org section
+
+#+BEGIN_SRC emacs-lisp
+(use-package org-roam
+      :hook
+      (after-init . org-roam-mode)
+      :custom
+      (org-roam-directory "~/Ruben/Roam")
+      :bind (:map org-roam-mode-map
+              (("C-c n l" . org-roam)
+               ("C-c n f" . org-roam-find-file)
+               ("C-c n g" . org-roam-show-graph))
+              :map org-mode-map
+              (("C-c n i" . org-roam-insert))))
+
+
+;;org section
+(setq org-todo-keywords
+      '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
+
+#+END_SR
+* Org
+One of the absolute greatest features of emacs is called "org-mode".
+This very file has been written in org-mode, a lot of other configurations are written in org-mode, same goes for
+academic papers, presentations, schedules, blogposts and guides.
+Org-mode is one of the most complex things ever, lets make it a bit more usable with some basic configuration.
+
+
+Those are all rather self-explanatory.
+
+** Common settings
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-ellipsis " ")
+  (setq org-src-fontify-natively t)
+  (setq org-src-tab-acts-natively t)
+  (setq org-confirm-babel-evaluate nil)
+  (setq org-export-with-smart-quotes t)
+  (setq org-src-window-setup 'current-window)
+  (add-hook 'org-mode-hook 'org-indent-mode)
+#+END_SRC
+
+** Syntax highlighting for documents exported to HTML
+#+BEGIN_SRC emacs-lisp
+  (use-package htmlize
+    :ensure t)
+#+END_SRC
+
+** Line wrapping
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'org-mode-hook
+	    '(lambda ()
+	       (visual-line-mode 1)))
+#+END_SRC
+
+** Keybindings
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-c '") 'org-edit-src-code)
+#+END_SRC
+
+** Org Bullets
+Makes it all look a bit nicer, I hate looking at asterisks.
+#+BEGIN_SRC emacs-lisp
+  (use-package org-bullets
+    :ensure t
+    :config
+      (add-hook 'org-mode-hook (lambda () (org-bullets-mode))))
+#+END_SRC
+
+** Easy-to-add emacs-lisp template
+Hitting tab after an "<el" in an org-mode file will create a template for elisp insertion.
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'org-structure-template-alist
+	       '("el" "#+BEGIN_SRC emacs-lisp\n?\n#+END_SRC"))
+#+END_SRC
+
+** Exporting options
+One of the best things about org is the ability to export your file to many formats.
+Here is how we add more 
